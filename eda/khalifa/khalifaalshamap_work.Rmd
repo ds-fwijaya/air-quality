@@ -1,0 +1,39 @@
+---
+title: "Choropleths Map"
+author: "Khalifaalsha"
+date: "10/16/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Required libraries
+
+```{r message=FALSE}
+library(pacman)
+p_load(tidyverse, choroplethr, choroplethrMaps,RColorBrewer)
+```
+
+## Importing the Data
+
+```{r}
+df <-  read.csv("map.csv", header = TRUE)
+
+```
+
+## Splitting the data for 1 state 
+
+We will make map for the california state with respect to the popolation in each country. so let us split the countries and total population columns
+```{r}
+df_pop_county <- filter(df, State == "California")
+data(df_pop_county)
+
+# choropleth map
+county_choropleth(df_pop_county, 
+                  title = "California County Population Estimates Choropleth Map", 
+                  legend = "Population",
+                  state_zoom = "california")
+
+```
