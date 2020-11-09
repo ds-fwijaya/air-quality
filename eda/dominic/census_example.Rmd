@@ -1,0 +1,66 @@
+---
+title: "tidycensus_example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(sf)
+library(tidycensus)
+```
+
+```{r}
+options(tigris_use_cache = TRUE)
+```
+
+
+
+```{r}
+census_api_key("PUT YOUR API KEY HERE", install=TRUE)
+```
+
+```{r}
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+```
+
+* The variable "B00001_001" is an estimate of the total number of people
+
+```{r}
+car_variables <- v18 %>%
+  filter(
+    str_detect(label, "(C|c)ar")
+  )
+```
+
+Looking through the variables that contain the word car,
+
+* "B08134_011" is the total number of people who drive to work by car/truck/van
+
+
+
+```{r}
+drivers_df <- get_acs(geography = "county",
+                       variables = c(pop = "B00001_001", drivers = "B08134_011"),
+                       year = 2018,
+                      state = "VA",
+                       geometry= TRUE)
+```
+
+```{r}
+drivers_pct_df <- drivers_df %>%
+  select(-moe) %>%
+  spread(
+    key = variable, value = estimate
+  ) %>%
+  mutate(
+    pct_drivers = 100 * drivers / pop
+  )
+```
+
+
+```{r}
+drivers_df %>% plot()
+```
+
