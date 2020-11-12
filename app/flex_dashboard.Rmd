@@ -17,9 +17,8 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(leafpop))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
-suppressPackageStartupMessages(library(readr))
 
-full_data <- readr::read_rds("data/processed/counties_mapping_data_simplified.rds") %>% 
+full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") %>% 
   filter(
     state_name == "Virginia"
   )
