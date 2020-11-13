@@ -45,6 +45,7 @@ ui <- fluidPage(
 pollutant <- colorFactor(topo.colors(n = 5), dataset$pollutant_grade)
 ozone <- colorFactor(topo.colors(n = 5), dataset$ozone_grade)
 
+
 ################################################################################
 # server
 ################################################################################
@@ -73,7 +74,23 @@ server <- function(input, output) {
                     dashArray = 3
                 )
         }
+        
+        else if (input$variable == 3) {
+            leaflet(shape) %>%
+                addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+                
+                addPolygons(
+                    fill = ~ ozone(dataset$annual_pass_fail),
+                    weight = 1,
+                    color = "white",
+                    dashArray = 3
+                )
+        }
+        
+        
     })
+    
+    
 }
 
 # Run the application
