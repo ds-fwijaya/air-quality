@@ -5,15 +5,13 @@ suppressPackageStartupMessages(library(leaflet))
 suppressPackageStartupMessages(library(sf))
 suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(leafpop))
+suppressPackageStartupMessages(library(readr))
 
 #########################################################
 # data aggregation
 #########################################################
 shape <- tigris::counties(state = "VA", class = "sf")
-County_Transportation_Profiles <- read_csv("data/County_Transportation_Profiles.csv")
-sota_fips <- read_csv("data/sota_fips.csv")
-#read_csv("nei_virginia_highway.csv")
-#read_csv("nei_virginia_offhighway.csv")
+County_Transportation_Profiles <- read_csv("data/processed/counties_mapping_data_simplified.rds")
 
 shape$GEOID <- as.numeric(shape$GEOID)
 
