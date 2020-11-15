@@ -17,11 +17,18 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(leafpop))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
+suppressPackageStartupMessages(library(RColorBrewer))
 
 full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") %>% 
   filter(
     state_name == "Virginia"
   )
+
+full_data$`Pollutant Grade`<-as.factor(full_data$`Pollutant Grade`)
+full_data$`Ozone Grade`<-as.factor(full_data$`Ozone Grade`)
+full_data$`Annual Pass/Fail`<-as.factor(full_data$`Annual Pass/Fail`)
+
+full_data$`Annual Pass/Fail`<-factor(full_data$`Annual Pass/Fail`,c("PASS","INC","DNC"))
 ```
 
 
@@ -43,15 +50,13 @@ selectInput("state", "Choose a state:",
 
 
 ```{r}
-varSelectInput(
+selectInput(
   "Grade", 
   "What grade would you like to View?", 
-  tibble(
-    "Pollutant Grade" = full_data$`Pollutant Grade`, 
-    "Ozone Grade" = full_data$`Ozone Grade`,
-    "Annual Pass/Fail" = full_data$`Annual Pass/Fail`
-    )
-  )
+  choices=c("Pollutant Grade"="Pollutant Grade",
+            "Ozone Grade"="Ozone Grade",      
+            "Annual Pass/Fail"="Annual Pass/Fail"))
+
 ```
 
 
@@ -70,18 +75,19 @@ Row 1 {data-height=650}
 
 ### Map
 
+
 ```{r}
 
 renderLeaflet(
   {
-    factpal <- colorFactor(c("yellow", "green"), full_data$`Pollutant Grade`)
+    factpal <- colorFactor(c("forestgreen","gold","firebrick1"),levels =  levels(full_data[[input$Grade]]),na.color = "grey")
     
     leaflet(full_data) %>% 
       addProviderTiles("Esri.WorldGrayCanvas") %>% 
       addPolygons(
         # data = shape,
         label = ~county_name,
-        fillColor = ~ factpal(full_data$`Pollutant Grade`),
+        fillColor = ~ factpal(full_data[[input$Grade]]),
         # layerId = ~COUNTYNS,
         opacity = 1,
         weight = 1,
@@ -105,7 +111,7 @@ renderLeaflet(
         ) %>% 
       addLegend(
         pal = factpal, 
-        values = ~`Pollutant Grade`, 
+        values = ~full_data[[input$Grade]], 
         opacity = 0.7, 
         title = NULL,
         position = "bottomright"
@@ -207,3 +213,4 @@ DT::renderDataTable({
     pageLength = 25 #bPaginate = FALSE
   ))
 })
+  
