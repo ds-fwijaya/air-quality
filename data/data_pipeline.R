@@ -9,20 +9,6 @@ library(tigris)
 ## County-level SOTA data ##
 ############################
 
-# shape <- tigris::counties(state = "VA", class = "sf")
-# 
-# shape$GEOID <- as.numeric(shape$GEOID)
-# 
-# shape <- select(
-#   shape,
-#   STATEFP,
-#   COUNTYFP,
-#   GEOID,
-#   NAMELSAD,
-#   COUNTYNS,
-#   geometry
-# )
-
 # Get housing costs & county outlines from Census Bureau
 options(tigris_use_cache = TRUE)
 national_county_house_prices <- get_acs(
@@ -105,4 +91,31 @@ final_df <- census_plus_sota %>%
   left_join(trans_2.5, by = "GEOID") %>%
   left_join(trans_nox, by = "GEOID")
 
-saveRDS(final_df, "data/processed/counties_mapping_data_simplified.rds")
+saveRDS(final_df, "app/data/processed/counties_mapping_data_simplified.rds")
+
+
+#############################
+# SIMPLIFY URBAN BOUNDARIES #
+#############################
+
+urban <- st_read("data/raw/urban_areas_shapefile_2019/cb_2018_us_ua10_500k.shp") %>%
+  select(NAME10) %>%
+  mutate(
+    name = as.character(NAME10),
+    area = st_area(geometry),
+    centroid = st_coordinates(st_centroid(geometry)),
+    lat = centroid[,2],
+    long = centroid[,1]
+  ) %>%
+  arrange(desc(area)) %>%
+  slice(1:500)
+
+attr(urban$lat, "names") <- NULL
+attr(urban$long, "names") <- NULL
+
+urban %>%
+  select(-area, -centroid) %>%
+  rmapshaper::ms_simplify(keep = 0.1) %>%
+  saveRDS("app/data/urban_areas_simplified.rds")
+
+
