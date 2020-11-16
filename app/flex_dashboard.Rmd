@@ -18,8 +18,8 @@ suppressPackageStartupMessages(library(leafpop))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
 
-full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds")
-metros <- read_rds("../data/processed/urban_areas_simplified.rds")
+full_data <- read_rds("data/counties_mapping_data_simplified.rds")
+metros <- read_rds("data/urban_areas_simplified.rds")
 ```
 
 

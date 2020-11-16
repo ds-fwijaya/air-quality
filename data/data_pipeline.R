@@ -91,7 +91,7 @@ final_df <- census_plus_sota %>%
   left_join(trans_2.5, by = "GEOID") %>%
   left_join(trans_nox, by = "GEOID")
 
-saveRDS(final_df, "data/processed/counties_mapping_data_simplified.rds")
+saveRDS(final_df, "app/data/processed/counties_mapping_data_simplified.rds")
 
 
 #############################
@@ -115,7 +115,7 @@ attr(urban$long, "names") <- NULL
 
 urban %>%
   select(-area, -centroid) %>%
-  rmapshaper::ms_simplify(keep = 0.3) %>%
-  saveRDS("data/processed/urban_areas_simplified.rds")
+  rmapshaper::ms_simplify(keep = 0.1) %>%
+  saveRDS("app/data/urban_areas_simplified.rds")
 
 
