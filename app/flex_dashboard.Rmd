@@ -17,8 +17,15 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(leafpop))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
+suppressPackageStartupMessages(library(RColorBrewer))
 
-full_data <- read_rds("data/counties_mapping_data_simplified.rds")
+full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") %>% 
+  mutate(
+    `Pollutant Grade` = as.factor(`Pollutant Grade`),
+    `Ozone Grade` = as.factor(`Ozone Grade`),
+    `Annual Pass/Fail` = as.factor(`Annual Pass/Fail`)
+    `Annual Pass/Fail` = factor(`Annual Pass/Fail`,c("PASS","INC","DNC"))
+  )
 metros <- read_rds("data/urban_areas_simplified.rds")
 ```
 
@@ -44,15 +51,13 @@ map_data <- full_data %>%
 
 
 ```{r}
-varSelectInput(
+selectInput(
   "Grade", 
   "What grade would you like to View?", 
-  tibble(
-    "Pollutant Grade" = full_data$`Pollutant Grade`, 
-    "Ozone Grade" = full_data$`Ozone Grade`,
-    "Annual Pass/Fail" = full_data$`Annual Pass/Fail`
-    )
-  )
+  choices=c("Pollutant Grade"="Pollutant Grade",
+            "Ozone Grade"="Ozone Grade",      
+            "Annual Pass/Fail"="Annual Pass/Fail"))
+
 ```
 
 
@@ -62,11 +67,12 @@ Row 1 {data-height=650}
 
 ### Map
 
+
 ```{r}
 output$sotaMap <- renderLeaflet(
   {
-    factpal <- colorFactor(c("yellow", "green"), map_data$`Pollutant Grade`)
-    
+    factpal <- colorFactor(c("forestgreen","gold","firebrick1"),levels =  levels(full_data[[input$Grade]]),na.color = "grey")
+
     leaflet(map_data) %>% 
       setView(-77.8, 37.8, 7) %>%
       addProviderTiles("Esri.WorldGrayCanvas") %>%
@@ -83,7 +89,7 @@ output$sotaMap <- renderLeaflet(
       addPolygons(
         # data = shape,
         label = ~county_name,
-        fillColor = ~ factpal(map_data$`Pollutant Grade`),
+        fillColor = ~ factpal(full_data[[input$Grade]]),
         layerId = ~GEOID,
         opacity = 1,
         weight = 1,
@@ -106,7 +112,7 @@ output$sotaMap <- renderLeaflet(
         ) %>% 
       addLegend(
         pal = factpal, 
-        values = ~`Pollutant Grade`, 
+        values = ~full_data[[input$Grade]], 
         opacity = 0.7, 
         title = NULL,
         position = "bottomright"
@@ -255,6 +261,7 @@ DT::renderDataTable({
     pageLength = 25 #bPaginate = FALSE
   ))
 })
+
 ```
 
 
