@@ -19,14 +19,34 @@ suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
 suppressPackageStartupMessages(library(RColorBrewer))
 
-full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") %>% 
+full_data <- read_rds("data/counties_mapping_data_simplified.rds") %>% 
   mutate(
+    `Pollutant Grade` = case_when(
+      `Pollutant Grade` == "DNC" ~ NA_character_,
+      `Pollutant Grade` == "INC" ~ NA_character_,
+      TRUE ~ `Pollutant Grade`,
+    ),
+    `Ozone Grade` = case_when(
+      `Ozone Grade` == "DNC" ~ NA_character_,
+      `Ozone Grade` == "INC" ~ NA_character_,
+      TRUE ~ `Ozone Grade`,
+    ),
+    `Annual Pass/Fail` = case_when(
+      `Annual Pass/Fail` == "DNC" ~ NA_character_,
+      `Annual Pass/Fail` == "INC" ~ NA_character_,
+      TRUE ~ `Annual Pass/Fail`,
+    ),
     `Pollutant Grade` = as.factor(`Pollutant Grade`),
     `Ozone Grade` = as.factor(`Ozone Grade`),
-    `Annual Pass/Fail` = as.factor(`Annual Pass/Fail`)
-    `Annual Pass/Fail` = factor(`Annual Pass/Fail`,c("PASS","INC","DNC"))
+    # `Annual Pass/Fail` = as.factor(`Annual Pass/Fail`),
+    `Annual Pass/Fail` = factor(`Annual Pass/Fail`,c("PASS","FAIL"))
   )
 metros <- read_rds("data/urban_areas_simplified.rds")
+map_data <- full_data %>% 
+      filter(
+        state_name == "Virginia"
+      )
+
 ```
 
 
@@ -43,10 +63,6 @@ selectInput("state", "Choose a state:",
       full_data$state_name,
       selected = "Virginia"
     )
-map_data <- full_data %>% 
-      filter(
-        state_name == "Virginia"
-      )
 ```
 
 
@@ -71,13 +87,13 @@ Row 1 {data-height=650}
 ```{r}
 output$sotaMap <- renderLeaflet(
   {
-    factpal <- colorFactor(c("forestgreen","gold","firebrick1"),levels =  levels(full_data[[input$Grade]]),na.color = "grey")
+    factpal <- colorFactor(c("forestgreen","gold","firebrick1"), levels = levels(full_data[[input$Grade]]),na.color = "grey")
 
     leaflet(map_data) %>% 
       setView(-77.8, 37.8, 7) %>%
       addProviderTiles("Esri.WorldGrayCanvas") %>%
-      addMapPane("metro_areas", zIndex = 400) %>% 
-      addMapPane("pollution_counties", zIndex = 420) %>% 
+      addMapPane("metro_areas", zIndex = 400) %>%
+      addMapPane("pollution_counties", zIndex = 420) %>%
       addPolygons(
         data = metros,
         color = "black",
@@ -89,7 +105,7 @@ output$sotaMap <- renderLeaflet(
       addPolygons(
         # data = shape,
         label = ~county_name,
-        fillColor = ~ factpal(full_data[[input$Grade]]),
+        fillColor = ~ factpal(map_data[[input$Grade]]),
         layerId = ~GEOID,
         opacity = 1,
         weight = 1,
@@ -118,13 +134,13 @@ output$sotaMap <- renderLeaflet(
         position = "bottomright"
         ) %>%
       addLabelOnlyMarkers(
-        lng = ~metros$long, 
-        lat = ~metros$lat, 
-        label = ~metros$name, 
+        lng = ~metros$long,
+        lat = ~metros$lat,
+        label = ~metros$name,
         labelOptions = labelOptions(noHide = T, direction = 'center', textOnly = T),
         group = "Metro Areas",
         options = pathOptions(pane = "metro_areas")
-        ) %>% 
+        ) %>%
       addLayersControl(
         overlayGroups = c("Metro Areas"),
         options = layersControlOptions(collapsed = FALSE)
@@ -180,8 +196,8 @@ renderUI(clicked_county())
 Ideas for content:
 
 * Glossary/definitions?
-* About the dashboard/ about us
-* Another visualization
+* About the dashboard/ about us?
+* Another visualization?
 
 
 
