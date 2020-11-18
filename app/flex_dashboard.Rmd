@@ -148,21 +148,20 @@ Inputs {.sidebar}
 -----------------------------------------------------------------------
 
 ### Pick two counties
-
 ```{r}
-selectInput("state1", "Choose a state:",
-      list(`East Coast` = list("Fairfax County", "NJ", "CT"),
-           `West Coast` = list("WA", "OR", "CA"),
-           `Midwest` = list("MN", "WI", "IA"))
-    )
+
+county_list <- full_data$GEOID
+
+names(county_list) <- paste(full_data$county_name, full_data$state_name, sep = ", ")
+
 ```
 
 ```{r}
-selectInput("state2", "Choose a state:",
-      list(`East Coast` = list("Arlington County", "NJ", "CT"),
-           `West Coast` = list("WA", "OR", "CA"),
-           `Midwest` = list("MN", "WI", "IA"))
-    )
+selectInput("county1", "Choose county 1:", county_list)
+```
+
+```{r}
+selectInput("county2", "Choose county 2:",county_list)
 ```
 
 Row 1
@@ -170,15 +169,28 @@ Row 1
 
 ### County 1
 
-* Information about county 1
+```{r}
+renderValueBox({
+  articles <- filter(full_data, GEOID == input$county1)
+  value <- as.numeric(articles$transportation_pm2.5)
+  valueBox(round(value, digits = 3), " Tons of pm 2.5 Pollution per day for county 1.",
+           icon = "ion-fireball")
+})
+```
 
 Row 2
 ------------
 
 ### County 2
 
-* Information about county 2
-
+```{r}
+renderValueBox({
+  articles <- filter(full_data, GEOID == input$county2)
+  value <- as.numeric(articles$transportation_pm2.5)
+  valueBox(round(value, digits = 3), " Tons of pm 2.5 Pollution per day for county 2.",
+           icon = "ion-fireball")
+})
+```
 
 Data
 =====
