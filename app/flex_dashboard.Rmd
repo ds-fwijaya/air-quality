@@ -167,11 +167,11 @@ clicked_county <- reactive({
       "<br>Median house price: $", county_stats$median_house_value,
       "<br>Median rent: $", county_stats$median_rent,
       "<br>% of People who commute in:", 
-      round(100 * county_stats$`Number of workers from other counties who commute to work in the county` / county_stats$`Number of residents`),
+      round(100 * county_stats$commute_within / county_stats$num_residents),
       "<br>% of People who commute to other counties:", 
-      round(100 * county_stats$`Number of resident workers who commute to work in other counties` / county_stats$`Number of residents`),
+      round(100 * county_stats$commute_out / county_stats$num_residents),
       "<br>% of People who commute within county:", 
-      round(100 * county_stats$`Number of resident workers who commute within county` / county_stats$`Number of residents`)
+      round(100 * county_stats$commute_within / county_stats$num_residents)
       ))
   }
   return(HTML("<p>Click on a county to display more information</p>"))
