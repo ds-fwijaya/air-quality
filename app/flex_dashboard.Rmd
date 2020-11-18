@@ -22,6 +22,7 @@ full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") 
   filter(
     state_name == "Virginia"
   )
+full_data
 ```
 
 
@@ -183,27 +184,28 @@ Row 2
 Data
 =====
 
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput("datatable_state", "Choose a state:",
+      full_data$state_name
+    )
+```
+
 ## Row 1
 
 ### Data
 
-<!-- ```{r} -->
-<!-- knitr::kable(head(full_data)) -->
-<!-- ``` -->
-
-
-
-<!-- ```{r} -->
-<!-- renderTable({ -->
-<!--   head(full_data, n = 10) -->
-<!-- }) -->
-<!-- ``` -->
 
 
 ```{r}
 DT::renderDataTable({
-  data <- head(full_data, n = input$maxrows)
-  DT::datatable(data, options = list(
-    pageLength = 25 #bPaginate = FALSE
-  ))
+  full_data %>%
+    filter(state_name == input$datatable_state )%>%
+    datatable()
 })
+```
+
+
