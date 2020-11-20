@@ -17,11 +17,35 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(leafpop))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(flexdashboard))
+suppressPackageStartupMessages(library(RColorBrewer))
 
-full_data <- read_rds("../data/processed/counties_mapping_data_simplified.rds") %>% 
-  filter(
-    state_name == "Virginia"
+full_data <- read_rds("data/counties_mapping_data_simplified.rds") %>% 
+  mutate(
+    `Pollutant Grade` = case_when(
+      `Pollutant Grade` == "DNC" ~ NA_character_,
+      `Pollutant Grade` == "INC" ~ NA_character_,
+      TRUE ~ `Pollutant Grade`,
+    ),
+    `Ozone Grade` = case_when(
+      `Ozone Grade` == "DNC" ~ NA_character_,
+      `Ozone Grade` == "INC" ~ NA_character_,
+      TRUE ~ `Ozone Grade`,
+    ),
+    `Annual Pass/Fail` = case_when(
+      `Annual Pass/Fail` == "DNC" ~ NA_character_,
+      `Annual Pass/Fail` == "INC" ~ NA_character_,
+      TRUE ~ `Annual Pass/Fail`,
+    ),
+    `Pollutant Grade` = as.factor(`Pollutant Grade`),
+    `Ozone Grade` = as.factor(`Ozone Grade`),
+    # `Annual Pass/Fail` = as.factor(`Annual Pass/Fail`),
+    `Annual Pass/Fail` = factor(`Annual Pass/Fail`,c("PASS","FAIL"))
   )
+metros <- read_rds("data/urban_areas_simplified.rds")
+map_data <- full_data %>% 
+      filter(
+        state_name == "Virginia"
+      )
 ```
 
 
@@ -35,32 +59,20 @@ Inputs {.sidebar}
 
 ```{r}
 selectInput("state", "Choose a state:",
-      list(`East Coast` = list("VA", "NJ", "CT"),
-           `West Coast` = list("WA", "OR", "CA"),
-           `Midwest` = list("MN", "WI", "IA"))
+      full_data$state_name,
+      selected = "Virginia"
     )
 ```
 
 
 ```{r}
-varSelectInput(
+selectInput(
   "Grade", 
   "What grade would you like to View?", 
-  tibble(
-    "Pollutant Grade" = full_data$`Pollutant Grade`, 
-    "Ozone Grade" = full_data$`Ozone Grade`,
-    "Annual Pass/Fail" = full_data$`Annual Pass/Fail`
-    )
-  )
-```
+  choices=c("Pollutant Grade"="Pollutant Grade",
+            "Ozone Grade"="Ozone Grade",      
+            "Annual Pass/Fail"="Annual Pass/Fail"))
 
-
-**Optional overlays**
-
-```{r}
-checkboxInput("inputId1", "Aiports", value = FALSE, width = NULL)
-checkboxInput("inputId2", "Ports", value = FALSE, width = NULL)
-checkboxInput("inputId", "Show metro areas", value = FALSE, width = NULL)
 ```
 
 
@@ -70,30 +82,40 @@ Row 1 {data-height=650}
 
 ### Map
 
-```{r}
 
-renderLeaflet(
+```{r}
+output$sotaMap <- renderLeaflet(
   {
-    factpal <- colorFactor(c("yellow", "green"), full_data$`Pollutant Grade`)
-    
-    leaflet(full_data) %>% 
-      addProviderTiles("Esri.WorldGrayCanvas") %>% 
+    factpal <- colorFactor(c("forestgreen","gold","firebrick1"), levels = levels(full_data[[input$Grade]]),na.color = "grey")
+
+    leaflet(map_data) %>% 
+      setView(-77.8, 37.8, 7) %>%
+      addProviderTiles("Esri.WorldGrayCanvas") %>%
+      addMapPane("metro_areas", zIndex = 400) %>%
+      addMapPane("pollution_counties", zIndex = 420) %>%
+      addPolygons(
+        data = metros,
+        color = "black",
+        fillColor = "light grey",
+        group = "Metro Areas",
+        options = pathOptions(pane = "metro_areas")
+      ) %>%
+      hideGroup("Metro Areas") %>%
       addPolygons(
         # data = shape,
         label = ~county_name,
-        fillColor = ~ factpal(full_data$`Pollutant Grade`),
-        # layerId = ~COUNTYNS,
+        fillColor = ~ factpal(map_data[[input$Grade]]),
+        layerId = ~GEOID,
         opacity = 1,
         weight = 1,
         color = "white",
         dashArray = "3",
         fillOpacity = 0.5,
+        # bringToFront = TRUE,
+        options = pathOptions(pane = "pollution_counties"),
         popup = paste(
-          "County:", full_data$county_name,"<br>",
-          "Selected Grade:", full_data[[input$Grade]] ,"<br>",
-          "Amount of People Who Commute In:", full_data$commute_into,"<br>",
-          "Amount of People who Commute Out:", full_data$commute_out,"<br>",
-          "Amount of People who Commute Within:", full_data$commute_within
+          "County:", map_data$county_name,"<br>",
+          input$Grade, ":", map_data[[input$Grade]] ,"<br>"
           ),
         highlight = highlightOptions(
           weight = 5,
@@ -105,13 +127,26 @@ renderLeaflet(
         ) %>% 
       addLegend(
         pal = factpal, 
-        values = ~`Pollutant Grade`, 
+        values = ~full_data[[input$Grade]], 
         opacity = 0.7, 
         title = NULL,
         position = "bottomright"
-        )
+        ) %>%
+      addLabelOnlyMarkers(
+        lng = ~metros$long,
+        lat = ~metros$lat,
+        label = ~metros$name,
+        labelOptions = labelOptions(noHide = T, direction = 'center', textOnly = T),
+        group = "Metro Areas",
+        options = pathOptions(pane = "metro_areas")
+        ) %>%
+      addLayersControl(
+        overlayGroups = c("Metro Areas"),
+        options = layersControlOptions(collapsed = FALSE)
+      )
     }
   )
+leafletOutput("sotaMap")
 ```
 
 
@@ -119,25 +154,50 @@ Row 2 {data-height=350}
 -------
 
 
-### <Name of Information Box>
-    
-Possible information to go here:
+### County stats
 
-* county grades
+```{r}
+clicked_county <- reactive({
+  # print(input$sotaMap_shape_click)
+  if (is.null(input$sotaMap_shape_click$id) == FALSE){
+    county_stats <- map_data %>%
+      filter(GEOID == input$sotaMap_shape_click$id)
+    return(HTML(
+      "County information for:", county_stats$county_name,
+      "<br>Median house price: $", county_stats$median_house_value,
+      "<br>Median rent: $", county_stats$median_rent,
+      "<br>% of People who commute in:", 
+      round(100 * county_stats$commute_within / county_stats$num_residents),
+      "<br>% of People who commute to other counties:", 
+      round(100 * county_stats$commute_out / county_stats$num_residents),
+      "<br>% of People who commute within county:", 
+      round(100 * county_stats$commute_within / county_stats$num_residents)
+      ))
+  }
+  return(HTML("<p>Click on a county to display more information</p>"))
+})
+renderUI(clicked_county())
+```
 
-* transportation emission statistics
 
-* housing information
+<!-- Possible information to go here: -->
 
-* commuting information
-    
+<!-- * county grades -->
+
+<!-- * transportation emission statistics -->
+
+<!-- * housing information -->
+
+<!-- * commuting information -->
+
 ### Another box
 
 Ideas for content:
 
 * Glossary/definitions?
-* About the dashboard/ about us
-* Another visualization
+* About the dashboard/ about us?
+* Another visualization?
+
 
 
 
@@ -148,21 +208,20 @@ Inputs {.sidebar}
 -----------------------------------------------------------------------
 
 ### Pick two counties
-
 ```{r}
-selectInput("state1", "Choose a state:",
-      list(`East Coast` = list("Fairfax County", "NJ", "CT"),
-           `West Coast` = list("WA", "OR", "CA"),
-           `Midwest` = list("MN", "WI", "IA"))
-    )
+
+county_list <- full_data$GEOID
+
+names(county_list) <- paste(full_data$county_name, full_data$state_name, sep = ", ")
+
 ```
 
 ```{r}
-selectInput("state2", "Choose a state:",
-      list(`East Coast` = list("Arlington County", "NJ", "CT"),
-           `West Coast` = list("WA", "OR", "CA"),
-           `Midwest` = list("MN", "WI", "IA"))
-    )
+selectInput("county1", "Choose county 1:", county_list)
+```
+
+```{r}
+selectInput("county2", "Choose county 2:",county_list)
 ```
 
 Row 1
@@ -170,40 +229,66 @@ Row 1
 
 ### County 1
 
-* Information about county 1
+```{r}
+renderValueBox({
+  articles <- filter(full_data, GEOID == input$county1)
+  value <- as.numeric(articles$transportation_pm2.5)
+  valueBox(round(value, digits = 3), " Tons of pm 2.5 Pollution per day for county 1.",
+           icon = "ion-fireball")
+})
+```
+
+```{r}
+# full_data %>%
+#   filter(GEOID == input$county1) %>%
+#   pluck(median_rent)
+```
+
 
 Row 2
 ------------
 
 ### County 2
 
-* Information about county 2
-
+```{r}
+renderValueBox({
+  articles <- filter(full_data, GEOID == input$county2)
+  value <- as.numeric(articles$transportation_pm2.5)
+  valueBox(round(value, digits = 3), " Tons of pm 2.5 Pollution per day for county 2.",
+           icon = "ion-fireball")
+})
+```
 
 Data
 =====
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput("datatable_state", "Choose a state:",
+      full_data$state_name
+    )
+```
 
 ## Row 1
 
 ### Data
 
-<!-- ```{r} -->
-<!-- knitr::kable(head(full_data)) -->
-<!-- ``` -->
-
-
-
-<!-- ```{r} -->
-<!-- renderTable({ -->
-<!--   head(full_data, n = 10) -->
-<!-- }) -->
-<!-- ``` -->
 
 
 ```{r}
 DT::renderDataTable({
-  data <- head(full_data, n = input$maxrows)
-  DT::datatable(data, options = list(
-    pageLength = 25 #bPaginate = FALSE
-  ))
+  full_data %>%
+    filter(state_name == input$datatable_state )%>%
+    datatable()
 })
+
+```
+
+
+About
+======
+
+
